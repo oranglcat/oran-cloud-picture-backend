@@ -8,7 +8,7 @@ spring:
     #数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:aws-wrapper:mysql://localhost:3306
+    url: jdbc:mysql://localhost:3306/oran_picture
     username: root
     password: 1234
 
