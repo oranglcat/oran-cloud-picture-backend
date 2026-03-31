@@ -1,23 +1,32 @@
 package com.oran.oranpicturebackend.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.oran.oranpicturebackend.common.ErrorCode;
 import com.oran.oranpicturebackend.constant.UserConstant;
 import com.oran.oranpicturebackend.exception.BusinessException;
+import com.oran.oranpicturebackend.model.dto.user.UserQueryRequest;
+import com.oran.oranpicturebackend.model.dto.user.UserRegisterRequest;
 import com.oran.oranpicturebackend.model.entity.User;
 import com.oran.oranpicturebackend.model.enums.UserRoleEnum;
 import com.oran.oranpicturebackend.model.vo.LoginUserVO;
+import com.oran.oranpicturebackend.model.vo.UserVO;
 import com.oran.oranpicturebackend.service.UserService;
 import com.oran.oranpicturebackend.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Wrapper;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * @author oranglcat
@@ -96,14 +105,65 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return getLoginUserVO(user);
     }
 
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        //从session中获取之前存入的用户
+        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        //类型转换
+        User currentUser = (User) userObj;
+        //校验用户信息
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        //从数据库查询最新用户信息 原因：使用缓存固然方便，但当用户修改个人信息比如头像时，缓存没有及时更新，用户得重新登陆
+        currentUser = this.getById(currentUser.getId());
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        return currentUser;
+    }
 
-    private String getEncryptPassword(String userPassword) {
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        if (userObj == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "未登录");
+        }
+        request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
+        return true;
+    }
+
+    @Override
+    public QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest) {
+        if (userQueryRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        Long id = userQueryRequest.getId();
+        String userName = userQueryRequest.getUserName();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(Objects.nonNull(id), "id", id);
+        queryWrapper.eq(StrUtil.isNotBlank(userRole), "userRole", userRole);
+        queryWrapper.like(StrUtil.isNotBlank(userAccount), "userAccount", userAccount);
+        queryWrapper.like(StrUtil.isNotBlank(userName), "userName", userName);
+        queryWrapper.like(StrUtil.isNotBlank(userProfile), "userProfile", userProfile);
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
+        return queryWrapper;
+    }
+
+    @Override
+    public String getEncryptPassword(String userPassword) {
         final String salt = "oran";
         return DigestUtils.md5DigestAsHex((userPassword + salt).getBytes());
     }
 
-
-    private LoginUserVO getLoginUserVO(User user) {
+    @Override
+    public LoginUserVO getLoginUserVO(User user) {
         if (user == null) {
             return null;
         }
@@ -111,6 +171,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         BeanUtil.copyProperties(user, loginUserVO);
 
         return loginUserVO;
+    }
+
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtil.copyProperties(user, userVO);
+
+        return userVO;
+    }
+
+    @Override
+    public List<UserVO> getUserVOList(List<User> userList) {
+        if (CollUtil.isEmpty(userList)) {
+            return new ArrayList<>();
+        }
+
+        return userList.stream()
+                .map(this::getUserVO)
+                .collect(Collectors.toList());
     }
 }
 

@@ -1,4 +1,4 @@
-package com.oran.oranpicturebackend.model.dto;
+package com.oran.oranpicturebackend.model.dto.user;
 
 import lombok.Data;
 
