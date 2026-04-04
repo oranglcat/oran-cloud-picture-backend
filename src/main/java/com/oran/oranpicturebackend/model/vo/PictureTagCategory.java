@@ -1,0 +1,13 @@
+package com.oran.oranpicturebackend.model.vo;
+
+import lombok.Data;
+
+import java.util.List;
+
+@Data
+public class PictureTagCategory {
+
+    private List<String> tagList;
+
+    private List<String> CategoryList;
+}
