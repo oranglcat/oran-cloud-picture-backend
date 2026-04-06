@@ -1,5 +1,6 @@
 package com.oran.oranpicturebackend.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
@@ -12,14 +13,17 @@ import com.oran.oranpicturebackend.exception.ThrowUtils;
 import com.oran.oranpicturebackend.manager.FileManager;
 import com.oran.oranpicturebackend.model.dto.file.UploadPictureResult;
 import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.oran.oranpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.oran.oranpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.oran.oranpicturebackend.model.entity.Picture;
 import com.oran.oranpicturebackend.model.entity.User;
+import com.oran.oranpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.oran.oranpicturebackend.model.vo.PictureVO;
 import com.oran.oranpicturebackend.model.vo.UserVO;
 import com.oran.oranpicturebackend.service.PictureService;
 import com.oran.oranpicturebackend.mapper.PictureMapper;
 import com.oran.oranpicturebackend.service.UserService;
+import net.bytebuddy.implementation.bytecode.Throw;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -190,6 +194,39 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (StrUtil.isNotBlank(introduction)) {
             ThrowUtils.throwIf(introduction.length() > 800, ErrorCode.PARAMS_ERROR, "简介过长");
         }
+    }
+
+    /*
+    * 图片审核
+    * */
+    @Override
+    public void doReviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser) {
+        //1.参数校验
+        ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+        Long id = pictureReviewRequest.getId();
+        Integer reviewStatus = pictureReviewRequest.getReviewStatus();
+        PictureReviewStatusEnum reviewStatusEnum = PictureReviewStatusEnum.getEnumByValue(reviewStatus);
+        String reviewMessage = pictureReviewRequest.getReviewMessage();
+
+        if(id == null || reviewMessage == null || PictureReviewStatusEnum.REVIEWING.equals(reviewStatusEnum)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //2.校验图片是否存在
+        Picture oldPicture = this.getById(id);
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+        ThrowUtils.throwIf(!oldPicture.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR);
+        //3.检测审核状态是否重复
+        if(oldPicture.getReviewStatus().equals(reviewStatus)){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "图片已审核");
+        }
+        // 4.数据库操作
+        Picture updatePicture = new Picture();
+        BeanUtil.copyProperties(pictureReviewRequest, updatePicture);
+        updatePicture.setEditTime(new Date());
+        updatePicture.setUserId(loginUser.getId());
+
+        boolean result = this.updateById(updatePicture);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
     }
 
 

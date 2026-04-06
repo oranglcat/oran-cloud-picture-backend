@@ -3,11 +3,13 @@ package com.oran.oranpicturebackend.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.oran.oranpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.oran.oranpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.oran.oranpicturebackend.model.dto.user.UserQueryRequest;
 import com.oran.oranpicturebackend.model.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oran.oranpicturebackend.model.entity.User;
+import com.oran.oranpicturebackend.model.vo.LoginUserVO;
 import com.oran.oranpicturebackend.model.vo.PictureVO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -56,5 +58,12 @@ public interface PictureService extends IService<Picture> {
       */
      void validPicture(Picture picture);
 
+     /**
+      * 审核图片
+      *
+      * @param pictureReviewRequest
+      * @param loginUser
+      */
+     void doReviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser);
 
 }

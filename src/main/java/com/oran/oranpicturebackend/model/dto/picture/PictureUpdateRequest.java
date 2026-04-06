@@ -28,6 +28,7 @@ public class PictureUpdateRequest implements Serializable {
      */
     private String category;
 
+
     /**
      * 标签
      */

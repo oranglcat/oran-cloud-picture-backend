@@ -11,10 +11,7 @@ import com.oran.oranpicturebackend.constant.UserConstant;
 import com.oran.oranpicturebackend.exception.BusinessException;
 import com.oran.oranpicturebackend.exception.ThrowUtils;
 import com.oran.oranpicturebackend.manager.CosManager;
-import com.oran.oranpicturebackend.model.dto.picture.PictureEditRequest;
-import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
-import com.oran.oranpicturebackend.model.dto.picture.PictureUpdateRequest;
-import com.oran.oranpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.oran.oranpicturebackend.model.dto.picture.*;
 import com.oran.oranpicturebackend.model.entity.Picture;
 import com.oran.oranpicturebackend.model.entity.User;
 import com.oran.oranpicturebackend.model.vo.PictureTagCategory;
@@ -214,6 +211,20 @@ public class PictureController {
         pictureTagCategory.setTagList(tagList);
         pictureTagCategory.setCategoryList(categoryList);
         return ResultUtils.success(pictureTagCategory);
+    }
+
+
+    /**
+     * 审核图片
+     */
+    @PostMapping("/review")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureQueryRequest,
+                                                 HttpServletRequest request) {
+       ThrowUtils.throwIf(pictureQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        pictureService.doReviewPicture(pictureQueryRequest, loginUser);
+        return ResultUtils.success(true);
     }
 
 }
