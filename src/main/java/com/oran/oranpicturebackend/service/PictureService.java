@@ -66,4 +66,5 @@ public interface PictureService extends IService<Picture> {
       */
      void doReviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser);
 
+    void fillReviewParams(Picture picture, User loginUser);
 }

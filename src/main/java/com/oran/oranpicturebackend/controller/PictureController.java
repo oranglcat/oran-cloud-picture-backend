@@ -14,6 +14,7 @@ import com.oran.oranpicturebackend.manager.CosManager;
 import com.oran.oranpicturebackend.model.dto.picture.*;
 import com.oran.oranpicturebackend.model.entity.Picture;
 import com.oran.oranpicturebackend.model.entity.User;
+import com.oran.oranpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.oran.oranpicturebackend.model.vo.PictureTagCategory;
 import com.oran.oranpicturebackend.model.vo.PictureVO;
 import com.oran.oranpicturebackend.service.PictureService;
@@ -49,7 +50,7 @@ public class PictureController {
     private PictureService pictureService;
 
 
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    //    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/upload")
     public BaseResponse<PictureVO> uploadPicture(
             @RequestPart("file") MultipartFile multipartFile,
@@ -89,7 +90,7 @@ public class PictureController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest, HttpServletRequest request) {
         if (pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -104,6 +105,9 @@ public class PictureController {
         long id = pictureUpdateRequest.getId();
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+        //补充审核参数
+        User loginUser = userService.getLoginUser(request);
+        pictureService.fillReviewParams(picture, loginUser);
         // 操作数据库
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -161,6 +165,8 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        //限制普通用户只能看审核通过的图片
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getQueryWrapper(pictureQueryRequest));
@@ -190,6 +196,8 @@ public class PictureController {
         long id = pictureEditRequest.getId();
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+        //补充审核参数
+        pictureService.fillReviewParams(picture, loginUser);
         // 仅本人或管理员可编辑
         if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
