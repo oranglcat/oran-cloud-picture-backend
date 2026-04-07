@@ -107,6 +107,31 @@ public class Picture implements Serializable {
      */
     private Date updateTime;
 
+    /*
+    * 审核时间
+    * */
+    private Date ReviewTime;
+
+    /**
+     * AI审核状态: 0-未审核, 1-通过, 2-拒绝
+     */
+    private Integer ai_review_status;
+
+    /**
+     * AI审核评分(0-100)
+     */
+    private Integer ai_review_score;
+
+    /**
+     * AI审核结果(JSON)
+     */
+    private String ai_review_result;
+
+    /**
+     * AI审核时间
+     */
+    private Date ai_review_time;
+
     /**
      * 是否删除
      */

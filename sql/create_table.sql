@@ -60,3 +60,14 @@ ALTER TABLE picture
 
 -- 创建基于 reviewStatus 列的索引
 CREATE INDEX idx_reviewStatus ON picture (reviewStatus);
+
+
+-- 为picture表添加AI审核相关字段
+ALTER TABLE picture
+    ADD COLUMN ai_review_status TINYINT DEFAULT 0 COMMENT 'AI审核状态: 0-未审核, 1-通过, 2-拒绝',
+    ADD COLUMN ai_review_score INT DEFAULT 0 COMMENT 'AI审核评分(0-100)',
+    ADD COLUMN ai_review_result TEXT COMMENT 'AI审核原始结果(JSON)',
+    ADD COLUMN ai_review_time DATETIME COMMENT 'AI审核时间';
+
+-- 添加索引优化查询
+CREATE INDEX idx_aiReviewStatus ON picture(ai_review_status);

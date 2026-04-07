@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -11,6 +12,7 @@ import com.oran.oranpicturebackend.common.ErrorCode;
 import com.oran.oranpicturebackend.exception.BusinessException;
 import com.oran.oranpicturebackend.exception.ThrowUtils;
 import com.oran.oranpicturebackend.manager.FileManager;
+import com.oran.oranpicturebackend.manager.QwenAiManager;
 import com.oran.oranpicturebackend.mapper.PictureMapper;
 import com.oran.oranpicturebackend.model.dto.file.UploadPictureResult;
 import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
@@ -49,6 +51,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private UserService userService;
+
+
+    @Resource
+    private QwenAiManager qwenAiManager;
 
     @Override
     public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest request, User loginUser) {
@@ -218,13 +224,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         PictureReviewStatusEnum reviewStatusEnum = PictureReviewStatusEnum.getEnumByValue(reviewStatus);
         String reviewMessage = pictureReviewRequest.getReviewMessage();
 
-        if(id == null || reviewMessage == null || PictureReviewStatusEnum.REVIEWING.equals(reviewStatusEnum)){
+        //ID不能为空，审核状态必须存在，提交要修改的审核状态不能为待审核
+        if(id == null || reviewStatusEnum == null || PictureReviewStatusEnum.REVIEWING.equals(reviewStatusEnum)){
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         //2.校验图片是否存在
         Picture oldPicture = this.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-        ThrowUtils.throwIf(!oldPicture.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR);
         //3.检测审核状态是否重复
         if(oldPicture.getReviewStatus().equals(reviewStatus)){
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "图片已审核");
@@ -233,7 +239,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture updatePicture = new Picture();
         BeanUtil.copyProperties(pictureReviewRequest, updatePicture);
         updatePicture.setEditTime(new Date());
-        updatePicture.setUserId(loginUser.getId());
+        updatePicture.setReviewerId(loginUser.getId());
+        updatePicture.setReviewTime(new Date());
 
         boolean result = this.updateById(updatePicture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -242,19 +249,77 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     /*
      * 填充审核参数
      * */
+    /*
+     * 填充审核参数
+     * */
     @Override
     public void fillReviewParams(Picture picture, User loginUser) {
-        //判断用户是否是管理员
         if (userService.isAdmin(loginUser)) {
-            //如果是管理员，默认通过审核
             picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
             picture.setReviewerId(loginUser.getId());
             picture.setReviewMessage("管理员权限通过");
         } else {
-            //不是管理员的话，不管更新还是编辑都是待审核
-            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
+            // 判断是新增还是更新
+            boolean isNew = picture.getId() == null;
+
+            if (isNew) {
+                // 新增图片：进行AI审核
+                try {
+                    QwenAiManager.AiReviewResult aiResult = qwenAiManager.reviewImage(picture.getUrl());
+
+                    picture.setAi_review_status(aiResult.getPass() ? 1 : 2);
+                    picture.setAi_review_score(aiResult.getScore());
+                    picture.setAi_review_result(JSONUtil.toJsonStr(aiResult));
+                    picture.setAi_review_time(new Date());
+
+                    if (aiResult.getPass() && aiResult.getScore() >= 70) {
+                        picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+                        picture.setReviewMessage("AI审核通过 (评分: " + aiResult.getScore() + ")");
+                    } else {
+                        picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
+                        String violations = aiResult.getViolations().isEmpty() ?
+                                "疑似违规" :
+                                String.join(", ", aiResult.getViolations());
+                        picture.setReviewMessage("AI初审未通过: " + aiResult.getReason() + " [" + violations + "]");
+                    }
+
+                } catch (Exception e) {
+                    picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
+                    picture.setReviewMessage("AI审核异常,转入人工审核: " + e.getMessage());
+                }
+            } else {
+                // 更新图片：保留原有的AI审核结果，不重新审核
+                Picture oldPicture = getById(picture.getId());
+                if (oldPicture != null) {
+                    // 只在不为空时保留旧值，允许手动更新审核状态
+                    if (picture.getAi_review_status() == null) {
+                        picture.setAi_review_status(oldPicture.getAi_review_status());
+                    }
+                    if (picture.getAi_review_score() == null) {
+                        picture.setAi_review_score(oldPicture.getAi_review_score());
+                    }
+                    if (picture.getAi_review_result() == null) {
+                        picture.setAi_review_result(oldPicture.getAi_review_result());
+                    }
+                    if (picture.getAi_review_time() == null) {
+                        picture.setAi_review_time(oldPicture.getAi_review_time());
+                    }
+
+                    // 如果用户没有手动修改审核状态，则保留原状态
+                    if (picture.getReviewStatus() == null) {
+                        picture.setReviewStatus(oldPicture.getReviewStatus());
+                    }
+                    if (picture.getReviewMessage() == null) {
+                        picture.setReviewMessage(oldPicture.getReviewMessage());
+                    }
+                    if (picture.getReviewerId() == null) {
+                        picture.setReviewerId(oldPicture.getReviewerId());
+                    }
+                }
+            }
         }
     }
+
 
 
 }
