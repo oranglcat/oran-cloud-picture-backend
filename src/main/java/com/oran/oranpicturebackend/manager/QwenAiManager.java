@@ -124,14 +124,7 @@ public class QwenAiManager {
             
             log.info("通义千问VL原始响应: {}", content);
             
-            String jsonStr = extractJsonFromResponse(content);
-            
-            if (StrUtil.isBlank(jsonStr)) {
-                log.error("无法从AI响应中提取JSON: {}", content);
-                return createFallbackResult(false, "AI响应格式错误");
-            }
-            
-            AiReviewResult reviewResult = JSONUtil.toBean(jsonStr, AiReviewResult.class);
+            AiReviewResult reviewResult = JSONUtil.toBean(content, AiReviewResult.class);
             
             if (reviewResult == null || reviewResult.getScore() == null) {
                 return createFallbackResult(false, "AI响应解析失败");
@@ -154,25 +147,6 @@ public class QwenAiManager {
         }
     }
 
-    /**
-     * 从响应中提取JSON字符串
-     */
-    private String extractJsonFromResponse(String response) {
-        if (response == null) {
-            return null;
-        }
-        
-        response = response.trim();
-        
-        int start = response.indexOf("{");
-        int end = response.lastIndexOf("}");
-        
-        if (start >= 0 && end > start) {
-            return response.substring(start, end + 1);
-        }
-        
-        return null;
-    }
 
     /**
      * 创建降级结果
