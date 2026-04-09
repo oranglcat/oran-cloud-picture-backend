@@ -13,6 +13,9 @@ import com.oran.oranpicturebackend.exception.BusinessException;
 import com.oran.oranpicturebackend.exception.ThrowUtils;
 import com.oran.oranpicturebackend.manager.FileManager;
 import com.oran.oranpicturebackend.manager.QwenAiManager;
+import com.oran.oranpicturebackend.manager.upload.FilePictureUpload;
+import com.oran.oranpicturebackend.manager.upload.FileUploadTemplate;
+import com.oran.oranpicturebackend.manager.upload.UrlPictureUpload;
 import com.oran.oranpicturebackend.mapper.PictureMapper;
 import com.oran.oranpicturebackend.model.dto.file.UploadPictureResult;
 import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
@@ -52,14 +55,20 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private UserService userService;
 
+    @Resource
+    private FilePictureUpload filePictureUpload;
+
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
+
 
     @Resource
     private QwenAiManager qwenAiManager;
 
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest request, User loginUser) {
+    public PictureVO uploadPicture(Object fileSource, PictureUploadRequest request, User loginUser) {
         //1.校验文件
-        ThrowUtils.throwIf(multipartFile == null, ErrorCode.PARAMS_ERROR,"上传文件为空");
+        ThrowUtils.throwIf(fileSource == null, ErrorCode.PARAMS_ERROR,"上传文件为空");
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
         //2.判断文件是更新还是保存
         Long pictureId = null;
@@ -76,7 +85,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         //4.上传文件
         String filePrefix = String.format("public/%s",loginUser.getId());
-        UploadPictureResult pictureResult = fileManager.uploadPicture(multipartFile, filePrefix);
+        FileUploadTemplate fileUploadTemplate = filePictureUpload;
+        if(fileSource instanceof String){
+            fileUploadTemplate = urlPictureUpload;
+        }
+        UploadPictureResult pictureResult = fileUploadTemplate.uploadPicture(fileSource, filePrefix);
         //5.操作数据库
         Picture picture = new Picture();
         picture.setUrl(pictureResult.getUrl());

@@ -34,8 +34,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
+
+/*
+* 已废弃，改为使用upload包的方法实现
+* */
 @Slf4j
 @Service
+@Deprecated
 public class FileManager {
 
     @Resource
