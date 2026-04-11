@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.oran.oranpicturebackend.model.dto.picture.PictureReviewRequest;
+import com.oran.oranpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.oran.oranpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.oran.oranpicturebackend.model.dto.user.UserQueryRequest;
 import com.oran.oranpicturebackend.model.entity.Picture;
@@ -16,10 +17,10 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 
 /**
-* @author oranglcat
-* @description 针对表【picture(图片)】的数据库操作Service
-* @createDate 2026-04-03 10:38:18
-*/
+ * @author oranglcat
+ * @description 针对表【picture(图片)】的数据库操作Service
+ * @createDate 2026-04-03 10:38:18
+ */
 public interface PictureService extends IService<Picture> {
 
 
@@ -36,6 +37,7 @@ public interface PictureService extends IService<Picture> {
 
      /**
       * 获取单个图片的 VO 对象
+      *
       * @param picture picture 对象
       * @param request request 请求
       * @return 对应图片的 VO
@@ -45,8 +47,9 @@ public interface PictureService extends IService<Picture> {
 
      /**
       * 分页获取图片 VO 对象
-      * @param picturePage  page 对象
-      * @param request request 请求
+      *
+      * @param picturePage page 对象
+      * @param request     request 请求
       * @return 分页的 VO
       */
      Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request);
@@ -54,6 +57,7 @@ public interface PictureService extends IService<Picture> {
 
      /**
       * 校验参数
+      *
       * @param picture 需要校验的 picture 对象
       */
      void validPicture(Picture picture);
@@ -66,5 +70,16 @@ public interface PictureService extends IService<Picture> {
       */
      void doReviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser);
 
-    void fillReviewParams(Picture picture, User loginUser);
+     void fillReviewParams(Picture picture, User loginUser);
+
+
+     /**
+      * 批量上传图片
+      *
+      * @param uploadByBatchRequest
+      * @param loginUser
+      * @return 抓取图片的数量
+      */
+     Integer uploadPictureBatch(PictureUploadByBatchRequest uploadByBatchRequest, User loginUser);
+
 }

@@ -30,6 +30,14 @@
             <optional>true</optional>
         </dependency>
 
+
+        <dependency>
+            <!-- jsoup HTML parser library @ https://jsoup.org/ -->
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.22.1</version>
+        </dependency>
+
         <!--阿里云百炼官方的 DashScope SDK-->
         <!-- Source: https://mvnrepository.com/artifact/com.alibaba/dashscope-sdk-java -->
         <dependency>

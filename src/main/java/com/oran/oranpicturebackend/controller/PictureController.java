@@ -252,4 +252,19 @@ public class PictureController {
         return ResultUtils.success(true);
     }
 
+
+
+    /**
+     * 批量抓取图片上传
+     */
+    @PostMapping("/upload/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Integer> uploadPictureByBatch(@RequestBody PictureUploadByBatchRequest batchRequest,
+                                                 HttpServletRequest request) {
+        ThrowUtils.throwIf(batchRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        Integer pictureBatch = pictureService.uploadPictureBatch(batchRequest, loginUser);
+        return ResultUtils.success(pictureBatch);
+    }
+
 }
