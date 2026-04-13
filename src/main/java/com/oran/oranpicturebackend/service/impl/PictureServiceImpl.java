@@ -269,9 +269,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     /*
      * 填充审核参数
      * */
-    /*
-     * 填充审核参数
-     * */
     @Override
     public void fillReviewParams(Picture picture, User loginUser) {
         if (userService.isAdmin(loginUser)) {
