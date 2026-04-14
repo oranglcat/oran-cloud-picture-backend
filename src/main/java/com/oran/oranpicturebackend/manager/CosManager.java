@@ -1,6 +1,7 @@
 package com.oran.oranpicturebackend.manager;
 
 
+import cn.hutool.core.io.FileUtil;
 import com.oran.oranpicturebackend.config.CosClientConfig;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.COSObject;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class CosManager {
@@ -54,6 +57,16 @@ public class CosManager {
         //对图片进行处理
         PicOperations picOperations = new PicOperations();
         picOperations.setIsPicInfo(1);
+        //压缩图片，转换成webp格式
+        List<PicOperations.Rule> rules = new ArrayList<>();
+        String webpKey = FileUtil.mainName(key) + ".webp";
+        PicOperations.Rule compressRule = new PicOperations.Rule();
+        compressRule.setBucket(cosClientConfig.getBucket());
+        compressRule.setFileId(webpKey);
+        compressRule.setRule("imageMogr2/format/webp");
+        rules.add(compressRule);
+        //构造处理参数
+        picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
     }

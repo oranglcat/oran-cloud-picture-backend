@@ -1,8 +1,10 @@
 package com.oran.oranpicturebackend.manager.upload;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.oran.oranpicturebackend.common.ErrorCode;
 import com.oran.oranpicturebackend.config.CosClientConfig;
@@ -11,7 +13,9 @@ import com.oran.oranpicturebackend.exception.ThrowUtils;
 import com.oran.oranpicturebackend.manager.CosManager;
 import com.oran.oranpicturebackend.model.dto.file.UploadPictureResult;
 import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.model.ciModel.persistence.CIObject;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
+import com.qcloud.cos.model.ciModel.persistence.ProcessResults;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
@@ -49,9 +53,10 @@ public abstract class FileUploadTemplate {
         validFile(inputSource);
         //2.获取文件路径
         String multiFileName = getOriginalFilename(inputSource);
+        String fileSuffix = FileUtil.getSuffix(multiFileName);
         String uuid = RandomUtil.randomString(16);
         String fileName = String.format("%s_%s.%s", DateUtil.formatTime(new Date()),
-                uuid, multiFileName);
+                uuid, fileSuffix);
         String filePath = String.format("%s/%s", uploadPathPrefix, fileName);
         //3.上传文件
         File file = null;
@@ -61,6 +66,13 @@ public abstract class FileUploadTemplate {
             PutObjectResult putObjectResult = cosManager.putPictureObject(filePath, file);
             //4.获取图片信息
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
+            //获取处理后的图片信息
+            ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
+            List<CIObject> objectList = processResults.getObjectList();
+            if(CollUtil.isNotEmpty(objectList)){
+                CIObject ciObject = objectList.get(0);
+                return getUploadPictureResult(fileName,ciObject);
+            }
             return getUploadPictureResult(imageInfo, filePath, fileName, file);
         } catch (Exception e) {
             log.error("图片上传到对象存储失败", e);
@@ -69,6 +81,24 @@ public abstract class FileUploadTemplate {
             //6.释放资源，删除临时文件
             deleteTempFile(file, filePath);
         }
+    }
+
+    private UploadPictureResult getUploadPictureResult(String fileName, CIObject ciObject) {
+        String format = ciObject.getFormat();
+        int width = ciObject.getWidth();
+        int height = ciObject.getHeight();
+        Double picScale = NumberUtil.round((width * 1.0 / height), 2).doubleValue();
+        //5.封装返回结果
+        UploadPictureResult pictureResult = new UploadPictureResult();
+        pictureResult.setUrl(cosClientConfig.getHost() + "/" + ciObject.getKey());
+        pictureResult.setPicName(fileName);
+        pictureResult.setPicSize(ciObject.getSize().longValue());
+        pictureResult.setPicWidth(width);
+        pictureResult.setPicHeight(height);
+        pictureResult.setPicScale(picScale);
+        pictureResult.setPicFormat(format);
+
+        return pictureResult;
     }
 
     protected abstract void processFile(Object inputSource, File file) throws Exception;
