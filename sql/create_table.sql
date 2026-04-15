@@ -71,3 +71,8 @@ ALTER TABLE picture
 
 -- 添加索引优化查询
 CREATE INDEX idx_aiReviewStatus ON picture(ai_review_status);
+
+
+-- 为picture添加缩略图url字段
+ALTER TABLE picture
+    ADD COLUMN thumbnailUrl VARCHAR(512) COMMENT '缩略图URL';

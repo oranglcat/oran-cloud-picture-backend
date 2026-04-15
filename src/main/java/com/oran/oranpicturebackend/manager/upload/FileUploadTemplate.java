@@ -70,8 +70,15 @@ public abstract class FileUploadTemplate {
             ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
             List<CIObject> objectList = processResults.getObjectList();
             if(CollUtil.isNotEmpty(objectList)){
-                CIObject ciObject = objectList.get(0);
-                return getUploadPictureResult(fileName,ciObject);
+                //获取压缩后的图片处理结果
+                CIObject compressObject = objectList.get(0);
+                //默认缩略图等于压缩后的结果
+                CIObject thumbnailCiObject = compressObject;
+                if(objectList.size() > 1){
+                    //如果存在缩略图处理，获取等比缩放的图片结果
+                    thumbnailCiObject = objectList.get(1);
+                }
+                return getUploadPictureResult(fileName,compressObject,thumbnailCiObject);
             }
             return getUploadPictureResult(imageInfo, filePath, fileName, file);
         } catch (Exception e) {
@@ -83,16 +90,17 @@ public abstract class FileUploadTemplate {
         }
     }
 
-    private UploadPictureResult getUploadPictureResult(String fileName, CIObject ciObject) {
-        String format = ciObject.getFormat();
-        int width = ciObject.getWidth();
-        int height = ciObject.getHeight();
+    private UploadPictureResult getUploadPictureResult(String fileName, CIObject compressObject,CIObject thumbnailCiObject) {
+        String format = compressObject.getFormat();
+        int width = compressObject.getWidth();
+        int height = compressObject.getHeight();
         Double picScale = NumberUtil.round((width * 1.0 / height), 2).doubleValue();
         //5.封装返回结果
         UploadPictureResult pictureResult = new UploadPictureResult();
-        pictureResult.setUrl(cosClientConfig.getHost() + "/" + ciObject.getKey());
+        pictureResult.setUrl(cosClientConfig.getHost() + "/" + compressObject.getKey());
+        pictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
         pictureResult.setPicName(fileName);
-        pictureResult.setPicSize(ciObject.getSize().longValue());
+        pictureResult.setPicSize(compressObject.getSize().longValue());
         pictureResult.setPicWidth(width);
         pictureResult.setPicHeight(height);
         pictureResult.setPicScale(picScale);

@@ -96,6 +96,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //5.操作数据库
         Picture picture = new Picture();
         picture.setUrl(pictureResult.getUrl());
+        picture.setThumbnailUrl(pictureResult.getThumbnailUrl());
 
         String picName = pictureResult.getPicName();
         if(request != null && StrUtil.isNotEmpty(request.getPicname())){
