@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.oran.oranpicturebackend.common.ErrorCode;
 import com.oran.oranpicturebackend.exception.BusinessException;
 import com.oran.oranpicturebackend.exception.ThrowUtils;
+import com.oran.oranpicturebackend.manager.CosManager;
 import com.oran.oranpicturebackend.manager.FileManager;
 import com.oran.oranpicturebackend.manager.QwenAiManager;
 import com.oran.oranpicturebackend.manager.upload.FilePictureUpload;
@@ -34,6 +35,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -67,6 +70,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private QwenAiManager qwenAiManager;
+    @Autowired
+    private CosManager cosManager;
 
     @Override
     public PictureVO uploadPicture(Object fileSource, PictureUploadRequest request, User loginUser) {
@@ -82,9 +87,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (pictureId != null) {
             Picture oldPicture = getById(pictureId);
             Long id = loginUser.getId();
+            // 判断是否有权限
             if (oldPicture == null || !userService.isAdmin(loginUser) || !oldPicture.getUserId().equals(id)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             }
+            //清理资源
+            this.deletePicture(oldPicture);
         }
         //4.上传文件
         String filePrefix = String.format("public/%s", loginUser.getId());
@@ -110,6 +118,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPicFormat(pictureResult.getPicFormat());
         picture.setUserId(loginUser.getId());
 
+        //如果pictureId不为空，则更新
         if (pictureId != null) {
             picture.setId(pictureId);
             picture.setEditTime(new Date());
@@ -395,6 +404,24 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
         }
         return pictureCount;
+    }
+
+    @Async
+    @Override
+    public void deletePicture(Picture picture) {
+        //判断该图片是否被多条记录使用
+        String url = picture.getUrl();
+        long count = lambdaQuery()
+                .eq(Picture::getUrl, url)
+                .count();
+        //如果被多条记录使用，则不删除
+        if(count > 1){
+            return;
+        }
+        //否则删除图片
+        cosManager.deleteObject(url);
+        //删除缩略图
+        cosManager.deleteObject(picture.getThumbnailUrl());
     }
 }
 

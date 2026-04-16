@@ -38,6 +38,11 @@ public class CosManager {
         return cosClient.putObject(putObjectRequest);
     }
 
+    /**
+     * 获取对象
+     * @param key
+     * @return
+     */
     public COSObject getObject(String key) {
         GetObjectRequest getObjectRequest = new GetObjectRequest(cosClientConfig.getBucket(), key);
         return cosClient.getObject(getObjectRequest);
@@ -79,5 +84,14 @@ public class CosManager {
         picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
+    }
+
+    /**
+     * 删除对象
+     *
+     * @param key
+     */
+    public void deleteObject(String key) {
+        cosClient.deleteObject(cosClientConfig.getBucket(), key);
     }
 }

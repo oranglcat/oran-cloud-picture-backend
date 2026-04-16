@@ -2,6 +2,9 @@ server:
   port: 8123
   servlet:
     context-path: /api  #上下文路径
+    session:
+      cookie:
+        max-age: 2592000
 spring:
   application:
     name: oran-picture-backend
@@ -18,6 +21,10 @@ spring:
     password: 123456
     connect-timeout: 5000
     database: 0
+  #session配置
+  session:
+    store-type: redis
+    timeout: 2592000 #30天过期
   servlet:
     ##开放更大的文件上传体积，否则SpringMVC会在上传文件时抛出异常
     multipart:
