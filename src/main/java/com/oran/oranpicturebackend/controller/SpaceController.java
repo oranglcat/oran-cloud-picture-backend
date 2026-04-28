@@ -10,12 +10,10 @@ import com.oran.oranpicturebackend.common.ResultUtils;
 import com.oran.oranpicturebackend.constant.UserConstant;
 import com.oran.oranpicturebackend.exception.BusinessException;
 import com.oran.oranpicturebackend.exception.ThrowUtils;
-import com.oran.oranpicturebackend.model.dto.space.SpaceAddRequest;
-import com.oran.oranpicturebackend.model.dto.space.SpaceEditRequest;
-import com.oran.oranpicturebackend.model.dto.space.SpaceQueryRequest;
-import com.oran.oranpicturebackend.model.dto.space.SpaceUpdateRequest;
+import com.oran.oranpicturebackend.model.dto.space.*;
 import com.oran.oranpicturebackend.model.entity.Space;
 import com.oran.oranpicturebackend.model.entity.User;
+import com.oran.oranpicturebackend.model.enums.SpaceLevelEnum;
 import com.oran.oranpicturebackend.model.vo.SpaceVO;
 import com.oran.oranpicturebackend.service.SpaceService;
 import com.oran.oranpicturebackend.service.UserService;
@@ -24,7 +22,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -196,6 +197,18 @@ public class SpaceController {
         boolean result = spaceService.updateById(space);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
+    }
+
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevel>> listSpaceLevel() {
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values()) // 获取所有枚举
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxCount(),
+                        spaceLevelEnum.getMaxSize()))
+                .collect(Collectors.toList());
+        return ResultUtils.success(spaceLevelList);
     }
     
     

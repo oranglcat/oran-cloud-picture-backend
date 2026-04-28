@@ -24,6 +24,7 @@ import com.oran.oranpicturebackend.service.SpaceService;
 import com.oran.oranpicturebackend.mapper.SpaceMapper;
 import com.oran.oranpicturebackend.service.UserService;
 import kotlin.jvm.Synchronized;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -53,11 +54,20 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Override
     public Long addSpace(SpaceAddRequest request, User loginUser) {
-        //1.校验参数，填充字段
+        // 1. 填充参数默认值
+        // 转换实体类和 DTO
         Space space = new Space();
-        BeanUtil.copyProperties(space,request);
-
-        validSpace(space,true);
+        BeanUtils.copyProperties(request, space);
+        if (StrUtil.isBlank(space.getSpaceName())) {
+            space.setSpaceName("默认空间");
+        }
+        if (space.getSpaceLevel() == null) {
+            space.setSpaceLevel(SpaceLevelEnum.COMMON.getValue());
+        }
+        // 填充容量和大小
+        this.fillSpaceByLevel(space);
+        // 2. 校验参数
+        this.validSpace(space, true);
 
         if(StrUtil.isBlank(space.getSpaceName())){
             space.setSpaceName("默认空间");
