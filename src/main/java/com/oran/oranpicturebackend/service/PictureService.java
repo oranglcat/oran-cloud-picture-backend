@@ -2,16 +2,14 @@ package com.oran.oranpicturebackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.oran.oranpicturebackend.model.dto.picture.PictureQueryRequest;
-import com.oran.oranpicturebackend.model.dto.picture.PictureReviewRequest;
-import com.oran.oranpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
-import com.oran.oranpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.oran.oranpicturebackend.model.dto.picture.*;
 import com.oran.oranpicturebackend.model.dto.user.UserQueryRequest;
 import com.oran.oranpicturebackend.model.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oran.oranpicturebackend.model.entity.User;
 import com.oran.oranpicturebackend.model.vo.LoginUserVO;
 import com.oran.oranpicturebackend.model.vo.PictureVO;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -84,9 +82,21 @@ public interface PictureService extends IService<Picture> {
 
 
      /**
-      * 删除图片
-      * @param picture
+      *
+      * @param loginUser
+      * @param pictureId
       */
-     void deletePicture(Picture picture);
+     void deletePicture(User loginUser,long pictureId);
+
+
+     void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+     @Async
+     void clearPictureFile(Picture picture);
+
+     /*
+     * 校验空间图片的权限
+     * */
+     void checkPictureAuth(User loginUser,Picture picture);
 
 }
